@@ -1,37 +1,76 @@
 <template>
-  <div class="container" @click="clickHandle('test click', $event)">
-
-    <div class="userinfo" @click="bindViewTap">
-      <open-data type="userAvatarUrl"></open-data>
-      <open-data type="userNickName"></open-data>
-      <div class="userinfo-nickname">
-        <card :text="userInfo.nickName"></card>
+  <div class="wrapper">
+    <div class="search">
+      <i class="iconfont icon-sousuo"></i>
+      <input maxlength="100" placeholder-class="place-color" placeholder-style="color:#fff;" confirm-type="搜索" placeholder="更多优惠搜搜看" />
+    </div>
+    <div class="nav">
+      <span v-for="nav in topNavs" :key="nav.id" :class="{'nav-selected': currentNav === nav.navId}" @click="tab(nav)">{{nav.name}}</span>
+    </div>
+    <div class="swiper-top">
+      <swiper indicator-dots="true"
+        autoplay="true" interval="5000" duration="1000">
+        <block v-for="banner in topBanner" :key="banner.id">
+          <swiper-item>
+            <image :src="banner.imgurl" @click="goSuperitem(banner, 'keyword')" class="slide-image" height="150"/>
+          </swiper-item>
+        </block>
+      </swiper>
+    </div>
+    <div class="middle-nav">
+      <div v-for="nav in navs" @click="goSuperitem(nav, 'nav')" :key="nav.nav_id"> 
+        <img :src="nav.imge_url" alt="">
+        <p>{{nav.name}}</p>
       </div>
     </div>
-
-    <div class="usermotto">
-      <div class="user-motto">
-        <card :text="motto"></card>
+    <div class="content">
+      <div class="swiper-middle">
+        <h2>今日值得买</h2>
+        <swiper indicator-dots="true"
+          autoplay="true" interval="5000" duration="1000">
+          <block v-for="(items, i) in deserveitem" :key="i">
+            <swiper-item class="swiper-middle-item">
+              <div v-for="item in items" :key="item.itemid">
+                <image :src="item.itempic" class="slide-image" height="150"/>
+                <p class="swiper-middle-item-title">{{item.itemtitle}}</p>
+                <p class="swiper-middle-item-price">原价¥{{item.itemprice}}</p>
+                <p class="swiper-middle-item-endprice">券后 ¥<text>{{item.itemendprice}}</text><text>券{{item.couponmoney}}</text></p>
+              </div>
+            </swiper-item>
+          </block>
+        </swiper>
+      </div>
+      <div class="ad">
+        <div v-for="cate in categories" :key="cate.category_id">
+          <image :src="cate.category_url" @click="goSuperitem(cate, 'column')"/>
+        </div>
+      </div>
+      <view class="footer-banner"><text class="iconfont icon-zengsong"></text><text>每日上新·好券不断</text></view>
+      <div class="recommend">
+        <card :commodity="item" v-for="item in focatitems" :key="item.itemid" />
       </div>
     </div>
-
-    <form class="form-container">
-      <input type="text" class="form-control" v-model="motto" placeholder="v-model" />
-      <input type="text" class="form-control" v-model.lazy="motto" placeholder="v-model.lazy" />
-    </form>
-    <a href="/pages/counter/main" class="counter">去往Vuex示例页面</a>
   </div>
 </template>
 
 <script>
-import card from '@/components/card';
+import { navList, banners } from '@/utils/constants'
+import service from '@/api/service'
+import card from '@/components/card'
 
 export default {
   data() {
     return {
-      motto: 'Hello World',
-      userInfo: {},
-    };
+      topNavs: navList,
+      currentNav: '01',
+      goodsList: [],
+      topBanner: [],
+      navs: [],
+      deserveitem: [],
+      categories: [],
+      focatitems: [],
+      fq_min_id: -1,
+    }
   },
 
   components: {
@@ -39,68 +78,97 @@ export default {
   },
 
   methods: {
-    bindViewTap() {
-      const url = '../logs/main';
-      wx.navigateTo({ url });
+    initData() {
+      this.getNav()
+      this.getBanner()
+      this.getDeserveitem()
+      this.getCategories()
+      this.getFqcatitems()
     },
-    getUserInfo() {
-      // 调用登录接口
-      wx.login({
-        success: () => {
-          wx.getUserInfo({
-            success: (res) => {
-              this.userInfo = res.userInfo;
-            },
-          });
-        },
-      });
+    /**
+     * 获取导航
+     */
+    getNav() {
+      service.getNav().then(data => {
+        this.navs = data.datainfo
+      })
     },
-    clickHandle(msg, ev) {
-      console.log('clickHandle:', msg, ev);
+
+    /**
+     * 获取上部banner
+     */
+    getBanner() {
+      this.topBanner = banners
+      // service.getBanner().then(({ data }) => {
+      //   this.topBanner = data
+      // })
+    },
+
+    /**
+     * 获取中部滚动广告
+     */
+    getDeserveitem() {
+      service.getDeserveitem().then(data => {
+        let temp = []
+        data.forEach(item => {
+          temp.push(item)
+          if (temp.length === 3) {
+            this.deserveitem.push([...temp])
+            temp = []
+          }
+        })
+      })
+    },
+
+    /**
+     * 获取广告类目
+     */
+    getCategories() {
+      service.getCategories().then(data => {
+        this.categories = data
+      })
+    },
+
+    /**
+     * 获取商品列表详情
+     */
+    getFqcatitems() {
+      service.getFqcatitems({
+        min_id: this.fq_min_id,
+        cid: 0,
+        isonline: 1,
+      }).then(data => {
+        this.fq_min_id = data.min_id
+        this.focatitems = [...this.focatitems, ...data.data]
+      })
+    },
+
+    /**
+     * 导航tab
+     */
+    tab({ navId }) {
+      this.currentNav = navId
+    },
+
+    /**
+     * 跳转筛选分类页面
+     */
+    goSuperitem(obj, type) {
+      wx.navigateTo({
+        url: `/pages/superitems/main?type=${type}&data=${JSON.stringify(obj)}`,
+      })
     },
   },
 
+  onReachBottom() {
+    this.getFqcatitems()
+  },
+
   created() {
-    // 调用应用实例的方法获取全局数据
-    this.getUserInfo();
+    this.initData()
   },
 };
 </script>
 
-<style scoped>
-.userinfo {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.userinfo-avatar {
-  width: 128rpx;
-  height: 128rpx;
-  margin: 20rpx;
-  border-radius: 50%;
-}
-
-.userinfo-nickname {
-  color: #aaa;
-}
-
-.usermotto {
-  margin-top: 150px;
-}
-
-.form-control {
-  display: block;
-  padding: 0 12px;
-  margin-bottom: 5px;
-  border: 1px solid #ccc;
-}
-
-.counter {
-  display: inline-block;
-  margin: 10px auto;
-  padding: 5px 10px;
-  color: blue;
-  border: 1px solid blue;
-}
+<style lang="less" src="./index.less" scoped>
 </style>

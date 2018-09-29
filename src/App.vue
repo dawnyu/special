@@ -12,15 +12,6 @@ export default {
 </script>
 
 <style>
-.container {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  padding: 200rpx 0;
-  box-sizing: border-box;
-}
 /* this rule will be remove */
 * {
   transition: width 2s;
@@ -28,4 +19,17 @@ export default {
   -webkit-transition: width 2s;
   -o-transition: width 2s;
 }
+input::-webkit-input-placeholder{
+  color:#fff;
+}
+input::-moz-placeholder{   /* Mozilla Firefox 19+ */
+  color:#fff;
+}
+input:-moz-placeholder{    /* Mozilla Firefox 4 to 18 */
+  color:#fff;
+}
+input:-ms-input-placeholder{  /* Internet Explorer 10-11 */ 
+  color:#fff;
+}
+
 </style>
